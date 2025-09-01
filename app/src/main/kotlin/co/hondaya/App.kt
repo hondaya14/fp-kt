@@ -3,6 +3,8 @@
  */
 package co.hondaya
 
+import kotlin.math.log
+
 class App {
   val greeting: String
     get() {
@@ -12,4 +14,62 @@ class App {
 
 fun main() {
   println(App().greeting)
+}
+
+// NOTE:
+// We want to find bugs / incorrect implementations on at Compile-time rather than at Run-time.
+//
+typealias UserId = String
+typealias Products = String
+sealed interface Order {
+    val userId: UserId
+    val products: Products
+}
+data class UnValidateOrder(
+    override val userId: UserId,
+    override val products: Products
+): Order
+
+sealed interface ValidateOrder: Order {
+    override val userId: UserId
+    override val products: Products
+}
+
+data class AcceptedOrder(
+    override val userId: UserId,
+    override val products: Products
+): ValidateOrder
+
+data class AbuseOrder(
+    override val userId: UserId,
+    override val products: Products
+) : ValidateOrder
+
+interface ProductRepository {
+    fun selectProducts(ids: List<String>): Products
+}
+
+class OrderExecuteUseCase {
+
+    context(productRepository: ProductRepository)
+    fun execute(ids: List<String>){
+        val products = productRepository.selectProducts(ids = ids)
+        val order = UnValidateOrder(userId = "userId", products = products)
+
+        order.let { unValidateOrder -> validate(order = unValidateOrder) }
+            .let { validateOrder -> checkStockout(order = validateOrder) }
+            .let { validateOrder -> acceptedOrder(order = validateOrder) }
+            .let { order ->
+                when(order) {
+                    is AbuseOrder -> {}
+                    is AcceptedOrder -> { TODO() }
+                }
+            }
+    }
+
+    // todo: ValidateOrderが多くて型で守れていないので、業務ロジックで型を決定し、fnを当てていく。
+    private fun validate(order: UnValidateOrder): ValidateOrder = TODO()
+    private fun checkStockout(order: ValidateOrder): ValidateOrder = TODO()
+    private fun acceptedOrder(order: ValidateOrder): ValidateOrder = TODO()
+    private fun linkMerchant(order: AcceptedOrder): Unit = TODO()
 }
